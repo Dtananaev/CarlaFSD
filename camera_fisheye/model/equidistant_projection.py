@@ -8,7 +8,7 @@
 import numpy as np
 import sys
 
-class EqudistantProjection:
+class EquidistantProjection:
     """This is implementation of the fish eye equidistant camera projection.
 
     
@@ -48,11 +48,8 @@ class EqudistantProjection:
 
         points3d = points3d.reshape(-1, 3)
 
-
-
-        # First find sqrt(X**2 + Y** 2)
+        # First find sqrt(X**2 + Y**2)
         norm_xy = np.linalg.norm(points3d[:, :2], axis=-1)
-
 
         # Find theta angle between optical axis and ray
         theta = np.arctan2(norm_xy, points3d[:, 2])

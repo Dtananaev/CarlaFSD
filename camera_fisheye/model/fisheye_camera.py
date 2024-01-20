@@ -10,7 +10,19 @@ from carla import ColorConverter as cc
 import numpy as np
 import weakref
 from scipy.spatial.transform import Rotation as R
+from model.equidistant_projection import EquidistantProjection
 import cv2
+import open3d as o3d 
+
+def write_point_cloud(points, filename):
+
+
+    # Create an Open3D PointCloud object from the NumPy array
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(points)
+
+    # Save the point cloud to a PLY file (other formats like XYZ, PCD, etc., are also supported)
+    o3d.io.write_point_cloud(filename, point_cloud)
 
 def process_image(image):
     ''' The callback function which gets raw image and convert it to array.'''
@@ -123,6 +135,8 @@ class FisheyeCamera:
         calibration[0, 2] = float(width) / 2.0 
         calibration[1, 2] = float(height) / 2.0 
         calibration[0, 0] = calibration[1, 1] = float(width) / (2.0 * float(fov) * np.pi / 360.0)
+        # initialize equidistant camera projection
+        self.projection_model = EquidistantProjection(fx=calibration[0,0], fy=calibration[1,1], cx=calibration[0,-1], cy=calibration[1,-1])
 
         # Create cube from 5 pinhole cameras for reprojection to fish eye
 
@@ -164,6 +178,30 @@ class FisheyeCamera:
         bottom_rot = R.from_matrix(main_rot @ bottom_local_rot).as_euler('xyz', degrees=True)
         self._bottom_pinhole = PinholeCamera(self._parent, width=pinhole_width, height=pinhole_height, fov=90, tick=tick,
                  x=x, y=y, z=z,roll=bottom_rot[0], pitch=bottom_rot[1], yaw=bottom_rot[2],camera_type=camera_type)
+        
+
+        # For all 5 image matrices intrinsc will be the same therefore will take from one
+        self.pinhole_intrisic_matrix = self._front_pinhole.sensor.calibration
+
+        # Compute mapping
+        self.maptable = self.compute_mapping(fisheye_width=width, fisheye_height=height, projection_model=self.projection_model, pinhole_intrisic_matrix=self.pinhole_intrisic_matrix)
+
+    def compute_mapping(self, fisheye_width: int, fisheye_height: int, projection_model: EquidistantProjection, pinhole_intrisic_matrix: np.ndarray)-> np.ndarray:
+        """Compute mapping for inverse warping between 5 pinhole to fish eye."""
+
+        # Get image coordinates
+        y, x = np.meshgrid(range(fisheye_height), range(fisheye_width), indexing='ij')
+
+        # Here pixels coords of the shape [height, width, 2]
+        fisheye_image_coords = np.concatenate((x[..., None], y[..., None]), axis=-1)
+
+        # Get 3D rays
+        fisheye_rays = projection_model.from_2d_to_3d(fisheye_image_coords)
+
+        
+        #write_point_cloud(fisheye_rays.reshape(-1, 3), filename="/home/denis/carla_workspace/debug_output/rays.ply")
+        # print(f"fisheye_rays {fisheye_rays.shape}")
+        return None
 
     def destroy(self):
         """Delete all cameras."""

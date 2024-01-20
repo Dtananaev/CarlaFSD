@@ -22,7 +22,8 @@ Use ARROWS or WASD keys for control.
 
 
 import carla
-from model.fisheye_camera import PinholeCamera
+import cv2
+from model.fisheye_camera import PinholeCamera, FisheyeCamera
 
 import random
 import pygame
@@ -39,7 +40,7 @@ FPS = 10
 def spawn_random_vehicle(world):
     # Get a vehicle mercedes.
     blueprint_library = world.get_blueprint_library()
-    vehicle_blueprints = world.get_blueprint_library().filter('*vehicle*')
+    vehicle_blueprints = world.get_blueprint_library().filter('vehicle.tesla.model3')
     spawn_points = world.get_map().get_spawn_points()
     return world.spawn_actor(random.choice(vehicle_blueprints), random.choice(spawn_points))
 
@@ -93,12 +94,15 @@ def main():
         client.set_timeout(2.0)
         world = client.get_world()
 
-
+        for bp in world.get_blueprint_library().filter('vehicle'):
+            print(bp.id)
         # Set up actors
         ego_vehicle = spawn_random_vehicle(world)
         camera = PinholeCamera(parent_actor=ego_vehicle, width=640, height=480, fov=90, tick=0.0,
-                 x=0.0, y=0.0, z=2.7, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
-        actors_list = [ego_vehicle, camera]    
+                 x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
+        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=640, height=480, fov=90, tick=0.0,
+                 x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
+        actors_list = [ego_vehicle, camera, fisheye_camera]    
 
             
         set_synchronous_mode(world, True)
@@ -109,6 +113,11 @@ def main():
                 display.blit(pygame.surfarray.make_surface(camera.image.swapaxes(0, 1)), (0, 0))
                 pygame.display.flip()
                 pygame.event.pump()
+
+                fisheye_camera.create_fisheye_image()
+                filename_to_save = f"/home/denis/carla_workspace/debug_output/box_{int(fisheye_camera.frame):04d}.jpg"
+                print(f"writing image to {filename_to_save}")
+                cv2.imwrite(filename_to_save,fisheye_camera._box_image[..., ::-1])
                 if control(ego_vehicle):
                     break
     finally:

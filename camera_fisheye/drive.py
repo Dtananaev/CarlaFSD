@@ -100,7 +100,7 @@ def main():
         ego_vehicle = spawn_random_vehicle(world)
         camera = PinholeCamera(parent_actor=ego_vehicle, width=640, height=480, fov=90, tick=0.0,
                  x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
-        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=640, height=480, fov=90, tick=0.0,
+        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=1024, height=512, horizontal_fov=180, vertical_fov=140, tick=0.0,
                  x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
         actors_list = [ego_vehicle, camera, fisheye_camera]    
 
@@ -117,7 +117,7 @@ def main():
                 fisheye_camera.create_fisheye_image()
                 filename_to_save = f"/home/denis/carla_workspace/debug_output/box_{int(fisheye_camera.frame):04d}.jpg"
                 print(f"writing image to {filename_to_save}")
-                cv2.imwrite(filename_to_save,fisheye_camera._box_image[..., ::-1])
+                cv2.imwrite(filename_to_save,fisheye_camera.image[..., ::-1])
                 if control(ego_vehicle):
                     break
     finally:

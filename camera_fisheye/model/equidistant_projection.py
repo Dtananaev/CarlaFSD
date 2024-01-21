@@ -11,6 +11,9 @@ import sys
 class EquidistantProjection:
     """This is implementation of the fish eye equidistant camera projection.
 
+    Note: The derived model equasions could be found in paper:
+        Steffen Abraham, Wolfgang Förstner. Fish-Eye-Stereo Calibration and Epipolar Rectification, (2005)
+        http://www.ipb.uni-bonn.de/pdfs/Steffen2005Fish.pdf
     
     Args:
         fx: focal length in x direction
@@ -53,11 +56,10 @@ class EquidistantProjection:
 
         # Find theta angle between optical axis and ray
         theta = np.arctan2(norm_xy, points3d[:, 2])
-
         # Compute normalized coordinates here we add small epsilon to avoid division by zero
-        x_normalized_coordinate = points3d[:, 0] / (norm_xy + sys.float_info.epsilon) * theta
-        y_normalized_coordinate = points3d[:, 1] / (norm_xy + sys.float_info.epsilon) * theta
-        
+        x_normalized_coordinate = points3d[:, 0]* theta / (norm_xy + sys.float_info.epsilon) 
+        y_normalized_coordinate = points3d[:, 1] *theta/ (norm_xy + sys.float_info.epsilon)
+
         ones = np.ones_like(x_normalized_coordinate)
 
         # Here homogeneous coordinates of the shape [3, ...]
@@ -97,13 +99,12 @@ class EquidistantProjection:
 
         # Get sqrt(x_norm**2 + y_norm**2)
         theta = np.linalg.norm(normalized_coords[:, :2], axis=-1)
-
-        X = normalized_coords[:, 0] / theta
-        Y = normalized_coords[:, 1] / theta
-        Z = 1.0 / np.tan(theta)
+        sin_t, cos_t = np.sin(theta), np.cos(theta)
+        X = normalized_coords[:, 0] * sin_t/ (theta + sys.float_info.epsilon)
+        Y = normalized_coords[:, 1] * sin_t  / (theta + sys.float_info.epsilon)
+        Z = cos_t
 
         rays3d = np.concatenate((X[:, None], Y[:, None], Z[:, None]), axis=-1)
-        rays3d = rays3d / np.linalg.norm(rays3d, axis=-1, keepdims=True)
 
         rays3d = np.reshape(rays3d, (*shape[:-1], 3))
         return rays3d

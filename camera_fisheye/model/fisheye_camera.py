@@ -14,6 +14,7 @@ from model.equidistant_projection import EquidistantProjection
 import cv2
 import open3d as o3d 
 from typing import Tuple
+
 def write_point_cloud(points, filename):
 
 
@@ -205,6 +206,10 @@ class FisheyeCamera:
         x_min, x_max = projection_model.fx * np.deg2rad(-45) + projection_model.cx, projection_model.fx * np.deg2rad(45)+ projection_model.cx
         y_min, y_max = projection_model.fy * np.deg2rad(-45)+ projection_model.cy, projection_model.fy * np.deg2rad(45)+ projection_model.cy
         front_camera_mask = (fisheye_image_coords[:, 0] >=x_min) & (fisheye_image_coords[:, 0] <x_max) & (fisheye_image_coords[:, 1] >=y_min) & (fisheye_image_coords[:, 1] <y_max)
+       
+        # For simmplicity we just get part of the image where all the rays corresponds to each pinhole camera
+        # In terms of the optimization there is possiblility to compute exact pixels area corresponding for each pinhole
+        # But since we have to compute only ones reprojection map the optimization improvement will be minor
         # Left camera
         left_camera_mask = (fisheye_image_coords[:, 0] <=fisheye_width / 2.0)
         # Right camera  
@@ -237,19 +242,19 @@ class FisheyeCamera:
         maptable[:, bottom_camera_mask] = bottom_cam_img_coords
         return maptable.T.reshape(shape).astype(np.float32)
 
-    def get_coordinates_for_box_image(self, fisheye_rays: np.ndarray, pinhole_width: int, pinhole_height: int, pinhole_intrisic_matrix: np.ndarray, camera_mask: str, camera_direction: str)-> Tuple[np.ndarray, np.ndarray]:
+    def get_coordinates_for_box_image(self, fisheye_rays: np.ndarray, pinhole_width: int, pinhole_height: int, pinhole_intrisic_matrix: np.ndarray, camera_mask: str, camera_direction: str, margin: float = 2.0)-> Tuple[np.ndarray, np.ndarray]:
         """Gets coordinates for the box image for given camera in a maptable."""
 
         if camera_direction == "front":
             cam_transform = np.eye(3)
-            box_idx = np.asarray([2*pinhole_width, 0.0])[:, None]
+            box_idx = np.asarray([2 * pinhole_width, 0.0])[:, None]
         if camera_direction == "left":
-            cam_transform = R.from_euler('xyz',[0.0,90, 0.0], degrees=True).as_matrix()
+            cam_transform = R.from_euler('xyz',[0.0, 90, 0.0], degrees=True).as_matrix()
             box_idx = np.asarray([0.0, 0.0])[:, None]
 
         if camera_direction == "right":
             cam_transform = R.from_euler('xyz',[0.0, -90, 0.0], degrees=True).as_matrix()
-            box_idx = np.asarray([4*pinhole_width, 0.0])[:, None]
+            box_idx = np.asarray([4 * pinhole_width, 0.0])[:, None]
 
         if camera_direction == "top":
             cam_transform = R.from_euler('xyz',[-90, 0.0, 0.0], degrees=True).as_matrix()
@@ -257,7 +262,7 @@ class FisheyeCamera:
     
         if camera_direction == "bottom":
             cam_transform = R.from_euler('xyz',[90, 0.0, 0.0], degrees=True).as_matrix()
-            box_idx = np.asarray([3*pinhole_width, 0.0])[:, None]
+            box_idx = np.asarray([3 * pinhole_width, 0.0])[:, None]
 
 
         fisheye_rays = fisheye_rays[:, camera_mask].copy()
@@ -266,8 +271,15 @@ class FisheyeCamera:
         transform = pinhole_intrisic_matrix @ cam_transform
         cam_img_coords = transform @ fisheye_rays
         cam_img_coords = cam_img_coords[:2, :] / cam_img_coords[2][None, :]
-        mask_image_coords = (cam_img_coords[0]>=0.0) & (cam_img_coords[0]< pinhole_width)  & (cam_img_coords[1]>=0.0) & (cam_img_coords[1]< pinhole_height) 
+
+        mask_image_coords = (cam_img_coords[0]>=-margin) & (cam_img_coords[0]< pinhole_width + margin)  & (cam_img_coords[1]>=-margin) & (cam_img_coords[1]< pinhole_height +margin) 
         cam_img_coords = cam_img_coords[:, mask_image_coords]    
+
+        # Fix for floating point coordinates by using margin
+        cam_img_coords[0, cam_img_coords[0, :] >= pinhole_width -1.0] = pinhole_width -1.0
+        cam_img_coords[1, cam_img_coords[1, :] >= pinhole_height -1.0] = pinhole_height -1.0
+        cam_img_coords[0, cam_img_coords[0, :] <= 0.0] = 0.0
+        cam_img_coords[1, cam_img_coords[1, :] <=0.0] = 0.0
 
         cam_img_coords += box_idx
         camera_mask[camera_mask] = mask_image_coords
@@ -275,36 +287,6 @@ class FisheyeCamera:
 
         return camera_mask, cam_img_coords
 
-
-    # def _get_coord_from_box_image(self,coords, position = "left"):
-    #     x_new = 0
-    #     y_new = 0
-    #     '''
-    #     This is fix for floating point in x for box image
-    #     in case if x = width of image it ex 
-    #     '''
-    #     if x>=(self.pinhole_width-1):
-    #         x=x-1
-    #     if y>=(self.pinhole_height-1):
-    #         y=y-1
-    #     if position == "left":
-    #         x_new = x
-    #         y_new = y    
-    #     if position == "top":
-
-    #         x_new = x+self.pinhole_width
-    #         y_new = y  
-
-    #     if position == "front":
-    #         x_new = x+2*self.pinhole_width
-    #         y_new = y  
-    #     if position == "bottom":
-    #         x_new = x+3*self.pinhole_width
-    #         y_new = y
-    #     if position == "right":
-    #         x_new = x+4*self.pinhole_width
-    #         y_new = y
-    #     return x_new, y_new
 
     def destroy(self):
         """Delete all cameras."""

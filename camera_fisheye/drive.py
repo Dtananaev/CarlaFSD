@@ -35,7 +35,9 @@ from pygame.locals import K_d
 from pygame.locals import K_s
 from pygame.locals import K_w
 
-FPS = 10
+IMAGE_WIDTH = 1920
+IMAGE_HEIGHT = 1080
+FPS = 4
 
 def spawn_random_vehicle(world):
     # Get a vehicle mercedes.
@@ -86,7 +88,7 @@ def main():
     try:
         # Initialize pygame and display for visualization
         pygame.init()
-        display = pygame.display.set_mode((640, 480), pygame.HWSURFACE | pygame.DOUBLEBUF)
+        display = pygame.display.set_mode((IMAGE_WIDTH, IMAGE_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
         pygame_clock = pygame.time.Clock()
 
         # Connect to client and get world
@@ -98,26 +100,20 @@ def main():
             print(bp.id)
         # Set up actors
         ego_vehicle = spawn_random_vehicle(world)
-        camera = PinholeCamera(parent_actor=ego_vehicle, width=640, height=480, fov=90, tick=0.0,
+        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=180, tick=0.0,
                  x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
-        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=1280, height=800, fov=185, tick=0.0,
-                 x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
-        actors_list = [ego_vehicle, camera, fisheye_camera]    
-
+        actors_list = [ego_vehicle, fisheye_camera]    
             
         set_synchronous_mode(world, True)
         # The game loop
         while True:
                 world.tick()
                 pygame_clock.tick_busy_loop(FPS)
-                display.blit(pygame.surfarray.make_surface(camera.image.swapaxes(0, 1)), (0, 0))
+                fisheye_camera.create_fisheye_image()
+                display.blit(pygame.surfarray.make_surface(fisheye_camera.image.swapaxes(0, 1)), (0, 0))
                 pygame.display.flip()
                 pygame.event.pump()
 
-                fisheye_camera.create_fisheye_image()
-                filename_to_save = f"/home/denis/carla_workspace/debug_output/box_{int(fisheye_camera.frame):04d}.jpg"
-                print(f"writing image to {filename_to_save}")
-                cv2.imwrite(filename_to_save,fisheye_camera.image[..., ::-1])
                 if control(ego_vehicle):
                     break
     finally:

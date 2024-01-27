@@ -124,7 +124,7 @@ class FisheyeCamera:
         # Carla parameters
         self._parent = parent_actor # vehicle where camera will be attached
         self.image = None
-        self._box_image = None
+        self._five_pinhole_image = None
         self.frame = 0
         # Estimate calibration for the equidistant projection
         # The relation is r = f * theta
@@ -226,23 +226,23 @@ class FisheyeCamera:
         pinhole_height = int(2.0 * projection_model.fy)
 
 
-        front_camera_mask, front_cam_img_coords = self.get_coordinates_for_box_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=front_camera_mask, camera_direction="front")
+        front_camera_mask, front_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=front_camera_mask, camera_direction="front")
         maptable[:, front_camera_mask] = front_cam_img_coords
 
-        left_camera_mask, left_cam_img_coords = self.get_coordinates_for_box_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=left_camera_mask, camera_direction="left")
+        left_camera_mask, left_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=left_camera_mask, camera_direction="left")
         maptable[:, left_camera_mask] = left_cam_img_coords
 
-        right_camera_mask, right_cam_img_coords = self.get_coordinates_for_box_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=right_camera_mask,camera_direction="right")
+        right_camera_mask, right_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=right_camera_mask,camera_direction="right")
         maptable[:, right_camera_mask] = right_cam_img_coords
 
-        top_camera_mask, top_cam_img_coords = self.get_coordinates_for_box_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=top_camera_mask, camera_direction="top")
+        top_camera_mask, top_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=top_camera_mask, camera_direction="top")
         maptable[:, top_camera_mask] = top_cam_img_coords
 
-        bottom_camera_mask, bottom_cam_img_coords = self.get_coordinates_for_box_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=bottom_camera_mask, camera_direction="bottom")
+        bottom_camera_mask, bottom_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=bottom_camera_mask, camera_direction="bottom")
         maptable[:, bottom_camera_mask] = bottom_cam_img_coords
         return maptable.T.reshape(shape).astype(np.float32)
 
-    def get_coordinates_for_box_image(self, fisheye_rays: np.ndarray, pinhole_width: int, pinhole_height: int, pinhole_intrisic_matrix: np.ndarray, camera_mask: str, camera_direction: str, margin: float = 2.0)-> Tuple[np.ndarray, np.ndarray]:
+    def get_coordinates_for_five_pinhole_image(self, fisheye_rays: np.ndarray, pinhole_width: int, pinhole_height: int, pinhole_intrisic_matrix: np.ndarray, camera_mask: str, camera_direction: str, margin: float = 1.5)-> Tuple[np.ndarray, np.ndarray]:
         """Gets coordinates for the box image for given camera in a maptable."""
 
         if camera_direction == "front":
@@ -264,9 +264,7 @@ class FisheyeCamera:
             cam_transform = R.from_euler('xyz',[90, 0.0, 0.0], degrees=True).as_matrix()
             box_idx = np.asarray([3 * pinhole_width, 0.0])[:, None]
 
-
         fisheye_rays = fisheye_rays[:, camera_mask].copy()
-
 
         transform = pinhole_intrisic_matrix @ cam_transform
         cam_img_coords = transform @ fisheye_rays
@@ -276,6 +274,7 @@ class FisheyeCamera:
         cam_img_coords = cam_img_coords[:, mask_image_coords]    
 
         # Fix for floating point coordinates by using margin
+        # This part removes black dots on the borders of the five pinhole cube
         cam_img_coords[0, cam_img_coords[0, :] >= pinhole_width -1.0] = pinhole_width -1.0
         cam_img_coords[1, cam_img_coords[1, :] >= pinhole_height -1.0] = pinhole_height -1.0
         cam_img_coords[0, cam_img_coords[0, :] <= 0.0] = 0.0
@@ -306,13 +305,13 @@ class FisheyeCamera:
         
         Note: this function should be called in order to update image for fish eye camera.
         """
-        self._box_image = np.hstack((self._left_pinhole.image,
+        self._five_pinhole_image = np.hstack((self._left_pinhole.image,
                               self._top_pinhole.image,
                              self._front_pinhole.image,
                             self._bottom_pinhole.image,                                
                             self._right_pinhole.image)).astype(np.float32)
 
-        remapped_img = cv2.remap(self._box_image, self.maptable[..., 0], self.maptable[..., 1], cv2.INTER_NEAREST)
+        remapped_img = cv2.remap(self._five_pinhole_image, self.maptable[..., 0], self.maptable[..., 1], cv2.INTER_NEAREST)
 
         self.image = remapped_img.astype('uint8')
 

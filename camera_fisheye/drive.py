@@ -100,8 +100,8 @@ def main():
             print(bp.id)
         # Set up actors
         ego_vehicle = spawn_random_vehicle(world)
-        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=180, tick=0.0,
-                 x=0.0, y=0.0, z=4, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
+        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=160, tick=0.0,
+                 x=2.40, y=0.0, z=0.75, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
         actors_list = [ego_vehicle, fisheye_camera]    
             
         set_synchronous_mode(world, True)

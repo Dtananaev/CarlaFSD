@@ -6,9 +6,10 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import numpy as np
+from camera_fisheye.camera_models.base_projection import BaseProjection
 import sys
 
-class EquidistantProjection:
+class EquidistantProjection(BaseProjection):
     """This is implementation of the fish eye equidistant camera projection.
 
     Note: The derived model equasions could be found in paper:
@@ -34,6 +35,30 @@ class EquidistantProjection:
                                             [0.0, 0.0, 1.0]])
         
         self.inv_intrinsic_matrix = np.linalg.inv(self.intrinsic_matrix)
+
+    @classmethod
+    def from_fov(cls, width: int, height: int, fov: float)-> None:
+        """Creates calibration from fov.
+        
+          Note: estimate calibration for the equidistant projection
+        The relation is r = f * theta
+        Here r = width / 2
+        theta = np.deg2rad(FOV / 2.0 ) or FOV * pi /360
+        for more info see: 
+        https://www.researchgate.net/publication/6899685_A_Generic_Camera_Model_and_Calibration_Method_for_Conventional_Wide-Angle_and_Fish-Eye_Lenses
+
+        Args:
+            width: width of the image
+            height: height of the image
+            fov: horizontal field of view
+        """
+
+        calibration = np.identity(3)
+        calibration[0, 2] = float(width) / 2.0 
+        calibration[1, 2] = float(height) / 2.0 
+        calibration[0, 0] =calibration[1, 1] =  float(width) / (2.0 * float(fov) * np.pi / 360.0)
+        return cls(fx=calibration[0,0], fy=calibration[1,1], cx=calibration[0,-1], cy=calibration[1,-1])
+
         
     def from_3d_to_2d(self, points3d: np.ndarray)-> np.ndarray:
         """The camera projection from 3D to 2D image.

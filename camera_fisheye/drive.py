@@ -5,25 +5,9 @@
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
-"""
-Welcome to TSR manual control.
-
-Use ARROWS or WASD keys for control.
-
-    W            : throttle
-    S            : brake
-    AD           : steer
-    Q            : toggle reverse
-    Space        : hand-brake
-    P            : toggle autopilot
-    C            : change weather (Shift+C reverse)
-    ESC          : quit
-"""
-
-
 import carla
-import cv2
-from model.fisheye_camera import PinholeCamera, FisheyeCamera
+from camera_fisheye.fisheye_camera import FisheyeCamera
+from camera_fisheye.camera_models.equidistant_projection import EquidistantProjection
 
 import random
 import pygame
@@ -35,13 +19,12 @@ from pygame.locals import K_d
 from pygame.locals import K_s
 from pygame.locals import K_w
 
-IMAGE_WIDTH = 1920
-IMAGE_HEIGHT = 1080
+IMAGE_WIDTH = 640
+IMAGE_HEIGHT = 480
 FPS = 4
 
 def spawn_random_vehicle(world):
     # Get a vehicle mercedes.
-    blueprint_library = world.get_blueprint_library()
     vehicle_blueprints = world.get_blueprint_library().filter('vehicle.tesla.model3')
     spawn_points = world.get_map().get_spawn_points()
     return world.spawn_actor(random.choice(vehicle_blueprints), random.choice(spawn_points))
@@ -81,6 +64,23 @@ def control(car):
     car.apply_control(control)
     return False
 
+def print_controls_help()->None:
+
+    msg = """
+    Welcome to Carla fisheye manual control.
+
+    Use ARROWS or WASD keys for control.
+
+        W            : throttle
+        S            : brake
+        AD           : steer
+        Q            : toggle reverse
+        Space        : hand-brake
+        P            : toggle autopilot
+        C            : change weather (Shift+C reverse)
+        ESC          : quit
+    """
+    print(msg)
 
 
 def main():
@@ -100,11 +100,12 @@ def main():
             print(bp.id)
         # Set up actors
         ego_vehicle = spawn_random_vehicle(world)
-        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=160, tick=0.0,
-                 x=2.40, y=0.0, z=0.75, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
+        fisheye_camera = FisheyeCamera(parent_actor=ego_vehicle, camera_model=EquidistantProjection, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=160, tick=0.0,
+                 x=2.40, y=0.0, z=1.5, roll=0, pitch=0, yaw=0, camera_type ='sensor.camera.rgb')
         actors_list = [ego_vehicle, fisheye_camera]    
             
         set_synchronous_mode(world, True)
+        print_controls_help()
         # The game loop
         while True:
                 world.tick()

@@ -6,7 +6,7 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import numpy as np
-from camera_fisheye.camera_models.base_projection import BaseProjection
+from carla_fsd.camera_fisheye.camera_models.base_projection import BaseProjection
 import sys
 
 class EquidistantProjection(BaseProjection):

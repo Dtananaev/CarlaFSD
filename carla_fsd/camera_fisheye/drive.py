@@ -6,8 +6,8 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import carla
-from camera_fisheye.fisheye_camera import FisheyeCamera
-from camera_fisheye.camera_models.equidistant_projection import EquidistantProjection
+from carla_fsd.camera_fisheye.fisheye_camera import FisheyeCamera
+from carla_fsd.camera_fisheye.camera_models.equidistant_projection import EquidistantProjection
 
 import random
 import pygame

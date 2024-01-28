@@ -10,7 +10,7 @@ from carla import ColorConverter as cc
 import numpy as np
 import weakref
 from scipy.spatial.transform import Rotation as R
-from camera_fisheye.camera_models.base_projection import BaseProjection
+from carla_fsd.camera_fisheye.camera_models.base_projection import BaseProjection
 import cv2
 from typing import Tuple
 

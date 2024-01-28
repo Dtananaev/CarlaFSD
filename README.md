@@ -62,3 +62,24 @@ bash ImportAssets.sh
 pip install ~/carla_workspace/CARLA/PythonAPI/carla/dist/carla-0.9.15-cp37-cp37m-manylinux_2_27_x86_64.whl
 pip install -r  ~/carla_workspace/CARLA/PythonAPI/examples/requirements.txt
 ```
+
+# Run CARLA
+
+Before strating any script below first run carla simulator by the following command:
+```bash
+cd ~/carla_workspace/CARLA
+
+bash CarlaUE4.sh
+
+```
+This command should run simulator server.
+
+## Run fisheye drive
+
+In order to run fisheye camera drive apply command:
+
+```bash
+cd ~/carla_workspace/CarlaFSD
+python -m carla_fsd.camera_fisheye.drive
+```
+Note: since we are not building package the run command should be imvoked from `CarlaFSD` folder.

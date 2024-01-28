@@ -134,4 +134,3 @@ class EquidistantProjection(BaseProjection):
         rays3d = np.reshape(rays3d, (*shape[:-1], 3))
         return rays3d
 
-

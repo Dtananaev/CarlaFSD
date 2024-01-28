@@ -21,7 +21,7 @@ from pygame.locals import K_w
 
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 480
-FPS = 4
+FPS = 0
 
 def spawn_random_vehicle(world):
     # Get a vehicle mercedes.

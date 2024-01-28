@@ -202,9 +202,7 @@ class FisheyeCamera:
         fisheye_rays = projection_model.from_2d_to_3d(fisheye_image_coords)
         fisheye_rays = fisheye_rays.T  
         # Front camera 
-        x_min, x_max = projection_model.fx * np.deg2rad(-45) + projection_model.cx, projection_model.fx * np.deg2rad(45)+ projection_model.cx
-        y_min, y_max = projection_model.fy * np.deg2rad(-45)+ projection_model.cy, projection_model.fy * np.deg2rad(45)+ projection_model.cy
-        front_camera_mask = (fisheye_image_coords[:, 0] >=x_min) & (fisheye_image_coords[:, 0] <x_max) & (fisheye_image_coords[:, 1] >=y_min) & (fisheye_image_coords[:, 1] <y_max)
+        front_camera_mask = np.ones((shape[0]*shape[1])).astype(np.bool)
        
         # For simplicity we just get part of the image where all the rays corresponds to each pinhole camera
         # In terms of the optimization there is possiblility to compute exact pixels area corresponding for each pinhole

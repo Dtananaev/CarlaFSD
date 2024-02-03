@@ -79,7 +79,8 @@ This command should run simulator server.
 In order to run fisheye camera drive apply command:
 
 ```bash
+source ~/carla_workspace/carla_venv/bin/activate
 cd ~/carla_workspace/CarlaFSD
 python -m carla_fsd.camera_fisheye.drive
 ```
-Note: since we are not building package the run command should be imvoked from `CarlaFSD` folder.
+Note: since we are not building package the run command should be invoked from `CarlaFSD` folder.

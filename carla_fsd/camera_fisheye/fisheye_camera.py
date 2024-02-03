@@ -127,7 +127,7 @@ class FisheyeCamera:
         camera_type: can be: 'sensor.camera.rgb', 'sensor.camera.semantic_segmentation' or 'sensor.camera.depth'
     """
     def __init__(self, parent_actor: carla.Actor, camera_model: BaseProjection, width: int=640, height: int=640, fov:int=180, tick:float=0.0,
-                 x: float=-6.5, y: float=0.0, z:float=2.7, roll:float=0.0, pitch:float=0.0, yaw: float=0.0,
+                 x: float=-6.5, y: float=0.0, z:float=2.7, roll:float=0.0, pitch:float=0.0, yaw: float=0.0, k0: float=0.0, k1: float=0.0, k2: float=0.0, k3: float=0.0, k4: float=0.0,
                  camera_type='sensor.camera.rgb')-> None:
         # Carla parameters
         self._parent = parent_actor # vehicle where camera will be attached
@@ -136,7 +136,7 @@ class FisheyeCamera:
         self.frame = 0
       
         # initialize equidistant camera projection
-        self.projection_model = camera_model.from_fov(width=width, height=height, fov=fov)
+        self.projection_model = camera_model.from_fov(width=width, height=height, fov=fov, k0=k0, k1=k1, k2=k2, k3=k3, k4=k4)
 
         # Create cube from 5 pinhole cameras for reprojection to fish eye
 
@@ -201,40 +201,34 @@ class FisheyeCamera:
 
         fisheye_rays = projection_model.from_2d_to_3d(fisheye_image_coords)
         fisheye_rays = fisheye_rays.T  
-        # Front camera 
-        front_camera_mask = np.ones((shape[0]*shape[1])).astype(np.bool)
-       
-        # For simplicity we just get part of the image where all the rays corresponds to each pinhole camera
-        # In terms of the optimization there is possiblility to compute exact pixels area corresponding for each pinhole
-        # But since we have to compute only ones reprojection map the optimization improvement will be minor
-        # Left camera
-        left_camera_mask = (fisheye_image_coords[:, 0] <=fisheye_width / 2.0)
-        # Right camera  
-        right_camera_mask =  (fisheye_image_coords[:, 0] >fisheye_width / 2.0)
-        # Top camera
-        top_camera_mask = (fisheye_image_coords[:, 1] <=fisheye_height /2.0) 
-        # Bottom camera
-        bottom_camera_mask = (fisheye_image_coords[:, 1] >fisheye_height /2.0) 
 
-        
         # Get coords from front given the fact that front camera FOV 90 for horizontal and vertical
         # we can compute the x and y coords        
         pinhole_width =  int(2.0 * projection_model.fx)
         pinhole_height = int(2.0 * projection_model.fy)
 
-
+        # Front camera 
+        front_camera_mask = np.ones((shape[0]*shape[1])).astype(np.bool)
         front_camera_mask, front_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=front_camera_mask, camera_direction="front")
         maptable[:, front_camera_mask] = front_cam_img_coords
 
+        # Left camera
+        left_camera_mask = (fisheye_image_coords[:, 0] <=fisheye_width / 2.0)
         left_camera_mask, left_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=left_camera_mask, camera_direction="left")
         maptable[:, left_camera_mask] = left_cam_img_coords
 
+        # Right camera  
+        right_camera_mask =  (fisheye_image_coords[:, 0] >fisheye_width / 2.0)
         right_camera_mask, right_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=right_camera_mask,camera_direction="right")
         maptable[:, right_camera_mask] = right_cam_img_coords
 
+        # Top camera
+        top_camera_mask = (fisheye_image_coords[:, 1] <=fisheye_height /2.0) 
         top_camera_mask, top_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=top_camera_mask, camera_direction="top")
         maptable[:, top_camera_mask] = top_cam_img_coords
 
+        # Bottom camera
+        bottom_camera_mask = (fisheye_image_coords[:, 1] >fisheye_height /2.0) 
         bottom_camera_mask, bottom_cam_img_coords = self.get_coordinates_for_five_pinhole_image(fisheye_rays=fisheye_rays, pinhole_width=pinhole_width, pinhole_height=pinhole_height, pinhole_intrisic_matrix=pinhole_intrisic_matrix, camera_mask=bottom_camera_mask, camera_direction="bottom")
         maptable[:, bottom_camera_mask] = bottom_cam_img_coords
         return maptable.T.reshape(shape).astype(np.float32)

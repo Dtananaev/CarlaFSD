@@ -14,8 +14,31 @@ class BaseProjection(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_fov(cls, width: int, height: int, fov: float)-> None:
+    def from_fov(cls, width: int, height: int, fov: float,  k0: float, k1: float, k2: float, k3: float, k4: float)-> None:
         """Constructor from fov."""
+
+    @abc.abstractmethod
+    def projection(self, points3d: np.ndarray)-> np.ndarray:
+        """The camera projection model from 3d points to normalized coordinates.
+        
+        Args:
+            points3d: the 3d points array of the shape [..., 3]
+
+        Returns:
+            normalized_coordinates: with z=1 of the shape [..., 3]
+        """
+
+    @abc.abstractmethod
+    def inverse_projection(self, normalized_coords: np.ndarray)-> np.ndarray:
+        """Iverse projection from normalized camera coordinates to 3d rays on the unit sphere.
+        
+        
+        Args:
+            normalized_coords: normmalized camera coordinates (z=1) of the shape [..., 3]
+        
+        Returns:
+            rays3d: 3d rays on the unit sphere of the shape [..., 3]
+        """
 
     @abc.abstractmethod
     def from_3d_to_2d(self, points3d: np.ndarray)-> np.ndarray:
@@ -27,7 +50,7 @@ class BaseProjection(abc.ABC):
         Returns:
             points2d: the 2d pixels positions on the image [..., 2]
         """
-
+    
 
     @abc.abstractmethod
     def from_2d_to_3d(self, pixels_coords: np.ndarray)-> np.ndarray:

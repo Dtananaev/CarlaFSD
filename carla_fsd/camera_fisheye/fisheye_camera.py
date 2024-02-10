@@ -109,6 +109,7 @@ class PinholeCamera:
         self.frame += 1
 
 
+
 class FisheyeCamera:
     """ FisheyeCamera class that simulates equidistant projection fish eye camera.
     
@@ -135,7 +136,7 @@ class FisheyeCamera:
         self._five_pinhole_image = None
         self.frame = 0
       
-        # initialize equidistant camera projection
+        # initialize fisheye camera projection
         self.projection_model = camera_model.from_fov(width=width, height=height, fov=fov, k0=k0, k1=k1, k2=k2, k3=k3, k4=k4)
 
         # Create cube from 5 pinhole cameras for reprojection to fish eye

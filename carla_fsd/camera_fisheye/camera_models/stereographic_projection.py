@@ -11,8 +11,8 @@ from carla_fsd.camera_fisheye.camera_models.lense_distortion import LenseDistort
 import sys
 
 
-class EquidistantProjection(BaseProjection):
-    """This is implementation of the fish eye equidistant camera projection.
+class StereographicProjection(BaseProjection):
+    """This is implementation of the fish eye stereographic camera projection.
 
     Note: The derived model equasions could be found in paper:
         Steffen Abraham, Wolfgang Förstner. Fish-Eye-Stereo Calibration and Epipolar Rectification, (2005)
@@ -43,10 +43,10 @@ class EquidistantProjection(BaseProjection):
     def from_fov(cls, width: int, height: int, fov: float,  k0: float, k1: float, k2: float, k3: float, k4: float)-> None:
         """Creates calibration from fov.
         
-          Note: estimate calibration for the equidistant projection
-        The relation is r = f * theta
+          Note: estimate calibration for the stereographic projection
+        The relation is r = f * tan(theta /2)
         Here r = width / 2
-        theta = np.deg2rad(FOV / 2.0 ) or FOV * pi /360
+        theta = r /  np.tan(np.deg2rad(FOV / 4.0 )) 
         for more info see: 
         https://www.researchgate.net/publication/6899685_A_Generic_Camera_Model_and_Calibration_Method_for_Conventional_Wide-Angle_and_Fish-Eye_Lenses
 
@@ -59,7 +59,7 @@ class EquidistantProjection(BaseProjection):
         calibration = np.identity(3)
         calibration[0, 2] = float(width) / 2.0 
         calibration[1, 2] = float(height) / 2.0 
-        calibration[0, 0] =calibration[1, 1] =  float(width) / (2.0 * float(fov) * np.pi / 360.0)
+        calibration[0, 0] = calibration[1, 1] =  float(width) / (2.0 * np.tan(np.deg2rad(float(fov) / 4.0 ))) 
         return cls(fx=calibration[0,0], fy=calibration[1,1], cx=calibration[0,-1], cy=calibration[1,-1], k0=k0, k1=k1, k2=k2, k3=k3, k4=k4)
 
 
@@ -79,15 +79,12 @@ class EquidistantProjection(BaseProjection):
 
         points3d = points3d.reshape(-1, 3)
 
-        # First find sqrt(X**2 + Y**2)
-        norm_xy = np.linalg.norm(points3d[:, :2], axis=-1)
+        # First find sqrt(X**2 + Y**2 + Z**2) + Z
+        denominator = np.linalg.norm(points3d, axis=-1) +  points3d[:, -1]
 
-        # Find theta angle between optical axis and ray
-        theta = np.arctan2(norm_xy, points3d[:, 2])
-        # Compute normalized coordinates here we add small epsilon to avoid division by zero
-        x_normalized_coordinate = points3d[:, 0] * theta / (norm_xy + sys.float_info.epsilon) 
-        y_normalized_coordinate = points3d[:, 1] * theta/ (norm_xy + sys.float_info.epsilon)
-
+        # Compute normalized coordinates
+        x_normalized_coordinate = points3d[:, 0] / denominator
+        y_normalized_coordinate = points3d[:, 1] / denominator
         ones = np.ones_like(x_normalized_coordinate)
         # Here homogeneous coordinates of the shape  [..., 3]
         normalized_coordinates = np.concatenate((x_normalized_coordinate[:, None], y_normalized_coordinate[:, None], ones[:, None]), axis=-1)
@@ -108,12 +105,13 @@ class EquidistantProjection(BaseProjection):
     
         if shape[-1] != 3:
             raise ValueError(f"Incorrect channels shape should be 3 but it is {shape[-1]}!")
-        # Get sqrt(x_norm**2 + y_norm**2)
-        theta = np.linalg.norm(normalized_coords[:, :2], axis=-1)
-        sin_t, cos_t = np.sin(theta), np.cos(theta)
-        X = normalized_coords[:, 0] * sin_t/ (theta + sys.float_info.epsilon)
-        Y = normalized_coords[:, 1] * sin_t  / (theta + sys.float_info.epsilon)
-        Z = cos_t
+
+        # Get x**2 + y**2
+        squared_xy = normalized_coords[:, 0]** 2 + normalized_coords[:, 1] ** 2
+
+        X = 2.0 * normalized_coords[:, 0] / (1.0  +  squared_xy)
+        Y = 2.0 *  normalized_coords[:, 1]  / (1.0 + squared_xy)
+        Z = (1.0 - squared_xy) /  (1.0 + squared_xy)
 
         rays3d = np.concatenate((X[:, None], Y[:, None], Z[:, None]), axis=-1)
         return rays3d.reshape(shape)

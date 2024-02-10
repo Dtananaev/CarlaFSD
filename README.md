@@ -63,6 +63,14 @@ pip install ~/carla_workspace/CARLA/PythonAPI/carla/dist/carla-0.9.15-cp37-cp37m
 pip install -r  ~/carla_workspace/CARLA/PythonAPI/examples/requirements.txt
 ```
 
+### Git lfs installation
+
+Install git lfs:
+```bash
+cd ~/carla_workspace/CarlaFSD
+~/carla_workspace/CarlaFSD
+```
+
 # Run CARLA
 
 Before strating any script below first run carla simulator by the following command:

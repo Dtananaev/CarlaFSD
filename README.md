@@ -68,7 +68,12 @@ pip install -r  ~/carla_workspace/CARLA/PythonAPI/examples/requirements.txt
 Install git lfs:
 ```bash
 cd ~/carla_workspace/CarlaFSD
-~/carla_workspace/CarlaFSD
+git lfs install
+```
+pull the lfs files by next command:
+```bash
+git lfs fetch
+git pull origin main
 ```
 
 # Run CARLA

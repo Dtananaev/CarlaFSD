@@ -69,7 +69,7 @@ class LenseDistortion:
         return dist_x, dist_y
     
     def undistortion(self, dist_x:  np.ndarray, dist_y : np.ndarray)-> Tuple[np.ndarray,np.ndarray] :
-        """Apply undistortion on distroted set of rays.
+        """Apply undistortion on distorted set of rays.
         
         Note: Due to complexity to derive close form solution from high order polynomial,
         here using Newton method instead.

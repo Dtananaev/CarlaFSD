@@ -118,8 +118,8 @@ def compute_five_pinhole_rays(five_pinhole_path: str) -> None:
 def main():
     """Main function."""
 
-    #fisheye_image_path = f"/home/{CURRENT_USER}/carla_workspace/CarlaFSD/carla_fsd/camera_fisheye/tutorial/images/rgb_001.jpg"
-    #compute_fisheye_rays(fisheye_image_path=fisheye_image_path)
+    fisheye_image_path = f"/home/{CURRENT_USER}/carla_workspace/CarlaFSD/carla_fsd/camera_fisheye/tutorial/images/rgb_001.jpg"
+    compute_fisheye_rays(fisheye_image_path=fisheye_image_path)
     five_pinhole_path  = f"/home/{CURRENT_USER}/carla_workspace/CarlaFSD/carla_fsd/camera_fisheye/tutorial/images/five_rgb_001.jpg"
     compute_five_pinhole_rays(five_pinhole_path=five_pinhole_path)
 

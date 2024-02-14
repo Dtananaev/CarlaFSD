@@ -7,8 +7,10 @@ import numpy as np
 import cv2
 import open3d as o3d
 import os
-CURRENT_USER = os.environ['USER']
 from carla_fsd.camera_fisheye.camera_models.equidistant_projection import EquidistantProjection
+
+CURRENT_USER = os.environ['USER']
+
 def write_to_ply(filename: str, points3d: np.ndarray, colors3d: np.ndarray)-> None:
     """Saves 3d point clouds"""
     # Create Open3D point cloud

@@ -140,7 +140,6 @@ def print_controls_help()->None:
 
 def main():
     """The main program."""
-    output_dir = "/home/denis/carla_workspace/output"
     try:
         # Initialize pygame and display for visualization
         pygame.init()
@@ -163,9 +162,6 @@ def main():
         pinhole_intrinsics = pinhole_camera.sensor.calibration
         fisheye_camera_equidistant = FisheyeCamera(parent_actor=ego_vehicle, camera_model=EquidistantProjection, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=180, tick=0.0,
                  x=2.40, y=0.0, z=1.5, roll=0, pitch=0, yaw=0, k0=0.0, k1=0.0, k2=0.0, k3=0.0, k4=0.0,  camera_type ='sensor.camera.rgb')
-
-        fisheye_camera_stereographic = FisheyeCamera(parent_actor=ego_vehicle, camera_model=StereographicProjection, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=180, tick=0.0,
-                 x=2.40, y=0.0, z=1.5, roll=0, pitch=0, yaw=0, k0=0.0, k1=0.0, k2=0.0, k3=0.0, k4=0.0,  camera_type ='sensor.camera.rgb')
       
         actors_list = [ego_vehicle, fisheye_camera_equidistant, fisheye_camera_stereographic, pinhole_camera]    
             
@@ -177,20 +173,6 @@ def main():
                 world.tick()
                 pygame_clock.tick_busy_loop(FPS)
                 fisheye_camera_equidistant.create_fisheye_image()
-                fisheye_camera_stereographic.create_fisheye_image()
-
-                #total_image = np.hstack( (fisheye_camera_equidistant.image, fisheye_camera_stereographic.image))
-
-                filename = os.path.join(output_dir, f"rgb_{int(fisheye_camera_equidistant.frame):03d}.jpg" )
-                cv2.imwrite(filename, fisheye_camera_equidistant.image[..., ::-1])
-
-
-                # image_undist = pinhole_camera.image
-                # image_dist = apply_distortion_on_pinhole(image_undist, intrinsics=pinhole_intrinsics, k0=0.0, k1=0.0, k2=dist_coeff, k3=0.0, k4=0.0)
-                # total_pinhole_image = np.hstack((image_undist, image_dist))
-                # total_pinhole_image = image_undist
-                # filename = os.path.join(output_dir, f"rgb_pinhole_{int(fisheye_camera_equidistant.frame):03d}.jpg" )
-                # cv2.imwrite(filename, total_pinhole_image[..., ::-1])
                 fisheye_camera = fisheye_camera_equidistant
                 display.blit(pygame.surfarray.make_surface(fisheye_camera.image.swapaxes(0, 1)), (0, 0))
                 pygame.display.flip()

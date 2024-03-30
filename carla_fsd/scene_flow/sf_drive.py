@@ -5,10 +5,13 @@
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
+import argparse
 import glob
 import os
 import sys
-from carla_fsd.scene_flow.tools.optical_flow_visu import point_vec
+import cv2
+from carla_fsd.scene_flow.tools.optical_flow_visu import point_vec, flow_to_image
+from carla_fsd.scene_flow.tools.optilca_flow_io import save_optical_flow_png
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
@@ -21,10 +24,6 @@ import carla
 
 import random
 
-try:
-    import pygame
-except ImportError:
-    raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
 try:
     import numpy as np
@@ -35,6 +34,8 @@ try:
     import queue
 except ImportError:
     import Queue as queue
+
+import pygame
 
 
 IMAGE_WIDTH =800
@@ -130,18 +131,18 @@ def get_image(image_rgb):
     array = array[:, :, ::-1]
     return array
 
-def get_optical_flow(image_flow, forward_flow =True):
+def get_optical_flow(image_flow, forward_flow =False):
     """Gets optical flow."""
     array = np.frombuffer(image_flow.raw_data, dtype=np.float32)
     array = np.reshape(array, (image_flow.height, image_flow.width, 2))
     array = array.copy()
     # Forward flow
     if forward_flow:
-        array[..., 0] *= 0.5 * image_flow.width
-        array[..., 1] *= -0.5 * image_flow.height
+        array[..., 0] *= image_flow.width
+        array[..., 1] *= -image_flow.height
     else:
-        array[..., 0] *= -0.5 * image_flow.width
-        array[..., 1] *= 0.5 * image_flow.height    
+        array[..., 0] *= -image_flow.width
+        array[..., 1] *=  image_flow.height    
     
     return array
     
@@ -161,23 +162,35 @@ def get_depth(image_depth):
     array = array[:, :, ::-1]
     return _decode_depth(array)
 
-def main():
-    output_dir = "./outputs"
+
+def get_arguments():
+    parser = argparse.ArgumentParser(description="Scene flow dataset arguments.")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./outputs",
+        help="Ouptput dir.",
+    )
+    args = parser.parse_args()
+    return args
+def main(output_dir, skip_first: int = 20):
 
 
     images_dir = os.path.join(output_dir, "rgb")
     depth_dir = os.path.join(output_dir, "depth")
     flow_dir = os.path.join(output_dir, "flow")
+    visu_dir = os.path.join(output_dir, "visu")
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(depth_dir, exist_ok=True)
     os.makedirs(flow_dir, exist_ok=True)
+    os.makedirs(visu_dir, exist_ok=True)
 
     actor_list = []
     pygame.init()
 
-
+    counter = 0.0
     display = pygame.display.set_mode(
-        (IMAGE_WIDTH, IMAGE_HEIGHT),
+        (3* IMAGE_WIDTH, IMAGE_HEIGHT),
         pygame.HWSURFACE | pygame.DOUBLEBUF)
     font = get_font()
     clock = pygame.time.Clock()
@@ -190,7 +203,6 @@ def main():
     try:
         m = world.get_map()
         start_pose = random.choice(m.get_spawn_points())
-        waypoint = m.get_waypoint(start_pose.location)
 
         blueprint_library = world.get_blueprint_library()
 
@@ -199,6 +211,7 @@ def main():
             start_pose)
         actor_list.append(vehicle)
         vehicle.set_simulate_physics(False)
+        vehicle.set_autopilot(True)
 
         x_pose = 2.40
         z_pose = 1.5
@@ -238,6 +251,8 @@ def main():
         # Create a synchronous mode context.
         with CarlaSyncMode(world, camera_rgb, camera_optical_flow, camera_depth, fps=30) as sync_mode:
             while True:
+                
+                
                 if should_quit():
                     return
                 clock.tick()
@@ -247,9 +262,26 @@ def main():
                 image = get_image(image_rgb)
                 optical_flow = get_optical_flow(image_flow, forward_flow=True)
 
-                optical_flow_visu = np.concatenate((optical_flow, np.ones((IMAGE_HEIGHT, IMAGE_WIDTH, 1))), axis=-1)
-                flow_rgb = point_vec(image, optical_flow_visu,skip=30)
+                optical_flow_norm = np.linalg.norm(optical_flow, axis=-1)
+                motion_mask = optical_flow_norm > 1.0
+
+                optical_flow[~motion_mask, :] = 0.0
+                print(f"optical_flow_norm {optical_flow_norm}")
+
+
+
+                optical_flow = np.concatenate((optical_flow, np.ones((IMAGE_HEIGHT, IMAGE_WIDTH, 1))), axis=-1)
+
+                moseg = image.copy()
+
+                moseg[motion_mask, :] = 0.5 * image[motion_mask, :] + 0.5 * np.asarray([0, 255, 0])
+
+                flow_rgb = point_vec(image, optical_flow,skip=20)
+                colorflow = flow_to_image(optical_flow)
+                total_flow = np.hstack((flow_rgb, colorflow, moseg))
                 depth = get_depth(image_depth)
+                location = vehicle.get_transform()
+                print(f"location {location}")
                 #print(f"depth  min {np.min(depth)} max {np.max(depth)}")
 
                 #print(f"optical_flow  min {np.min(optical_flow)} max {np.max(optical_flow)}")
@@ -257,13 +289,15 @@ def main():
                 #print(f"depth {depth.shape}, optical_flow {optical_flow.shape}")
 
                 # Choose the next waypoint and update the car location.
-                waypoint = random.choice(waypoint.next(1.5))
-                vehicle.set_transform(waypoint.transform)
+                #waypoint = random.choice(waypoint.next(1.5))
+                #vehicle.set_transform(waypoint.transform)
 
+                #if control(vehicle):
+                #    break
                 fps = round(1.0 / snapshot.timestamp.delta_seconds)
 
                 # Draw the display.
-                display.blit(pygame.surfarray.make_surface(flow_rgb.swapaxes(0, 1)), (0, 0))
+                display.blit(pygame.surfarray.make_surface(total_flow.swapaxes(0, 1)), (0, 0))
                 pygame.display.flip()
                 pygame.event.pump()           
                 display.blit(
@@ -273,6 +307,28 @@ def main():
                     font.render('% 5d FPS (simulated)' % fps, True, (255, 255, 255)),
                     (8, 28))
                 pygame.display.flip()
+
+
+                # Save 
+                if counter > skip_first:
+                    frame = int(counter)
+                    # Save rgb
+                    rgb_filename= os.path.join(images_dir, f"{frame:04d}.jpg")
+                    cv2.imwrite(rgb_filename, image[...,::-1])
+
+                    # Save depth
+                    depth_filename = os.path.join(depth_dir, f"{frame:04d}.png")
+                    cv2.imwrite(depth_filename, np.uint16(depth))
+
+
+                    # Save flow
+                    flow_filename = os.path.join(flow_dir, f"{frame:04d}.png")
+                    save_optical_flow_png(filename=flow_filename, optical_flow=optical_flow)
+
+                    # Save visu
+                    visu_filename = os.path.join(visu_dir, f"{frame:04d}.jpg")
+                    cv2.imwrite(visu_filename, total_flow[..., ::-1])
+                counter+=1
 
     finally:
 
@@ -285,4 +341,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = get_arguments()
+    main(output_dir=args.output_dir)

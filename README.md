@@ -88,7 +88,7 @@ bash CarlaUE4.sh
 This command should run simulator server.
 
 ## Run fisheye drive
-
+Check (medium blog)[https://medium.com/@d.d.tananaev/unleashing-the-power-of-fish-eye-cameras-in-carla-simulator-abb7ab5bc147] for implementation details
 In order to run fisheye camera drive apply command:
 
 ```bash

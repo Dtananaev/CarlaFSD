@@ -11,7 +11,7 @@ import os
 import sys
 import cv2
 from carla_fsd.scene_flow.tools.optical_flow_visu import point_vec, flow_to_image
-from carla_fsd.scene_flow.tools.optilca_flow_io import save_optical_flow_png
+from carla_fsd.scene_flow.tools.optilca_flow_io import save_optical_flow_png, load_optical_flow_png
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
@@ -190,7 +190,7 @@ def main(output_dir, skip_first: int = 20):
 
     counter = 0.0
     display = pygame.display.set_mode(
-        (3* IMAGE_WIDTH, IMAGE_HEIGHT),
+        (2* IMAGE_WIDTH, IMAGE_HEIGHT),
         pygame.HWSURFACE | pygame.DOUBLEBUF)
     font = get_font()
     clock = pygame.time.Clock()
@@ -260,25 +260,20 @@ def main(output_dir, skip_first: int = 20):
                 # Advance the simulation and wait for the data.
                 snapshot, image_rgb, image_flow, image_depth = sync_mode.tick(timeout=2.0)
                 image = get_image(image_rgb)
-                optical_flow = get_optical_flow(image_flow, forward_flow=True)
+                optical_flow = get_optical_flow(image_flow, forward_flow=False)
 
                 optical_flow_norm = np.linalg.norm(optical_flow, axis=-1)
                 motion_mask = optical_flow_norm > 1.0
 
                 optical_flow[~motion_mask, :] = 0.0
-                print(f"optical_flow_norm {optical_flow_norm}")
-
-
 
                 optical_flow = np.concatenate((optical_flow, np.ones((IMAGE_HEIGHT, IMAGE_WIDTH, 1))), axis=-1)
 
-                moseg = image.copy()
 
-                moseg[motion_mask, :] = 0.5 * image[motion_mask, :] + 0.5 * np.asarray([0, 255, 0])
-
-                flow_rgb = point_vec(image, optical_flow,skip=20)
+                flow_rgb = point_vec(image, optical_flow, skip=20)
                 colorflow = flow_to_image(optical_flow)
-                total_flow = np.hstack((flow_rgb, colorflow, moseg))
+                # flow_rgb
+                total_flow = np.hstack((flow_rgb, colorflow))
                 depth = get_depth(image_depth)
                 location = vehicle.get_transform()
                 print(f"location {location}")
@@ -319,7 +314,6 @@ def main(output_dir, skip_first: int = 20):
                     # Save depth
                     depth_filename = os.path.join(depth_dir, f"{frame:04d}.png")
                     cv2.imwrite(depth_filename, np.uint16(depth))
-
 
                     # Save flow
                     flow_filename = os.path.join(flow_dir, f"{frame:04d}.png")

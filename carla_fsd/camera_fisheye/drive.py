@@ -163,7 +163,7 @@ def main():
         fisheye_camera_equidistant = FisheyeCamera(parent_actor=ego_vehicle, camera_model=EquidistantProjection, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, fov=180, tick=0.0,
                  x=2.40, y=0.0, z=1.5, roll=0, pitch=0, yaw=0, k0=0.0, k1=0.0, k2=0.0, k3=0.0, k4=0.0,  camera_type ='sensor.camera.rgb')
       
-        actors_list = [ego_vehicle, fisheye_camera_equidistant, fisheye_camera_stereographic, pinhole_camera]    
+        actors_list = [ego_vehicle, fisheye_camera_equidistant, pinhole_camera]    
             
         set_synchronous_mode(world, True)
         print_controls_help()

@@ -24,7 +24,7 @@ from pygame.locals import K_w
 
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 480
-FPS =3
+FPS =10
 
 
 def apply_distortion_on_pinhole(image, intrinsics, k0, k1, k2, k3, k4):
@@ -168,7 +168,6 @@ def main():
         set_synchronous_mode(world, True)
         print_controls_help()
         # The game loop
-        dist_coeff = -0.001
         while True:
                 world.tick()
                 pygame_clock.tick_busy_loop(FPS)
@@ -177,7 +176,6 @@ def main():
                 display.blit(pygame.surfarray.make_surface(fisheye_camera.image.swapaxes(0, 1)), (0, 0))
                 pygame.display.flip()
                 pygame.event.pump()
-                dist_coeff*=2.0
 
                 if control(ego_vehicle):
                     break
